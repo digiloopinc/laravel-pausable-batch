@@ -16,8 +16,7 @@ class PausableBatchRepository implements BatchRepository
     public function __construct(
         protected BatchRepository $repository,
         protected BatchPauseStore $pauseStore,
-    ) {
-    }
+    ) {}
 
     public function store(PendingBatch $batch): Batch
     {

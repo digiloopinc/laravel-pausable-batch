@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Digiloop\LaravelPausableBatch\Queue;
 
-use InvalidArgumentException;
-use Illuminate\Queue\RedisQueue;
-use Illuminate\Queue\Jobs\RedisJob;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Illuminate\Queue\Jobs\RedisJob;
+use Illuminate\Queue\RedisQueue;
+use InvalidArgumentException;
 
 class PausableRedisQueue extends RedisQueue
 {

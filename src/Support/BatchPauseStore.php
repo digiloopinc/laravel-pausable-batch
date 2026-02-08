@@ -16,8 +16,7 @@ class BatchPauseStore
         protected string $connection,
         protected string $prefix,
         protected int $restoreChunkSize,
-    ) {
-    }
+    ) {}
 
     public function pause(string $batchId): void
     {
