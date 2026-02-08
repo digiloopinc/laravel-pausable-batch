@@ -1,6 +1,6 @@
 <?php
 
-namespace VendorName\Skeleton\Tests;
+namespace Digiloop\LaravelPausableBatch\Tests;
 
 use PHPUnit\Framework\TestCase;
 
