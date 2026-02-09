@@ -17,44 +17,7 @@ on:
       - 'composer.lock'
 
 jobs:
-  test-smoke:
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        php: [8.4]
-        stability: [prefer-lowest, prefer-stable]
-
-    name: P${{ matrix.php }} - ${{ matrix.stability }} - ${{ matrix.os }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
-          coverage: none
-
-      - name: Setup problem matchers
-        run: |
-          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
-          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
-
-      - name: Install dependencies
-        run: composer update --${{ matrix.stability }} --prefer-dist --no-interaction
-
-      - name: List Installed Dependencies
-        run: composer show -D
-
-      - name: Execute tests
-        run: vendor/bin/phpunit
-
-  test-redis-laravel-matrix:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -64,9 +27,11 @@ jobs:
           - laravel: '11.x'
             testbench: '^9.0'
             illuminate: '^11.0'
+            phpunit: '^10.3.2'
           - laravel: '12.x'
             testbench: '^10.0'
             illuminate: '^12.0'
+            phpunit: '^11.5|^12.0'
 
     name: Redis - Laravel ${{ matrix.laravel }}
 
@@ -104,7 +69,8 @@ jobs:
             --with "illuminate/queue:${{ matrix.illuminate }}" \
             --with "illuminate/redis:${{ matrix.illuminate }}" \
             --with "illuminate/support:${{ matrix.illuminate }}" \
-            --with "orchestra/testbench:${{ matrix.testbench }}"
+            --with "orchestra/testbench:${{ matrix.testbench }}" \
+            --with "phpunit/phpunit:${{ matrix.phpunit }}"
 
       - name: List Installed Dependencies
         run: composer show -D
