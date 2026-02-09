@@ -10,7 +10,6 @@ use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Digiloop\LaravelPausableBatch\Tests\Concerns\InteractsWithRedis;
 use Digiloop\LaravelPausableBatch\Tests\TestCase;
 use Illuminate\Queue\Jobs\RedisJob;
-use InvalidArgumentException;
 use Mockery as m;
 
 class PausableRedisQueueTest extends TestCase
@@ -31,25 +30,23 @@ class PausableRedisQueueTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_constructor_requires_a_pause_store_instance(): void
+    public function test_constructor_signature_requires_a_pause_store_instance(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $constructor = new \ReflectionMethod(PausableRedisQueue::class, '__construct');
+        $parameters = $constructor->getParameters();
+        $pauseStoreParameter = $parameters[7];
 
-        new PausableRedisQueue(
-            $this->app['redis'],
-            'default',
-            'default',
-            90,
-            null,
-            false,
-            -1,
-            null,
-        );
+        $this->assertFalse($pauseStoreParameter->allowsNull());
+        $this->assertTrue($pauseStoreParameter->hasType());
+        $type = $pauseStoreParameter->getType();
+        $this->assertInstanceOf(\ReflectionNamedType::class, $type);
+        $this->assertSame(BatchPauseStore::class, $type->getName());
+        $this->assertSame('pauseStore', $pauseStoreParameter->getName());
     }
 
     public function test_it_pops_jobs_for_unpaused_batches(): void
     {
-        $queue = $this->app['queue']->connection('redis-pausable');
+        $queue = $this->app['queue']->connection('redis');
 
         $queue->pushRaw($this->payload('job-1', 'batch-1'), 'default');
 
@@ -64,8 +61,8 @@ class PausableRedisQueueTest extends TestCase
     public function test_it_parks_jobs_for_paused_batches_and_moves_on_to_next_job(): void
     {
         /** @var BatchPauseStore $store */
-        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
-        $queue = $this->app['queue']->connection('redis-pausable');
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis');
+        $queue = $this->app['queue']->connection('redis');
 
         $store->pause('batch-paused');
 
@@ -79,7 +76,12 @@ class PausableRedisQueueTest extends TestCase
 
         $this->assertInstanceOf(RedisJob::class, $job);
         $this->assertSame('job-ready', json_decode($job->getRawBody(), true)['id']);
-        $this->assertSame([$pausedPayload], $this->app['redis']->connection('default')->lrange($this->pausedListKey('batch-paused', 'queues:default'), 0, -1));
+        $parkedPayloads = $this->app['redis']->connection('default')->lrange($this->pausedListKey('batch-paused', 'queues:default'), 0, -1);
+        $this->assertCount(1, $parkedPayloads);
+        $parkedPayload = json_decode($parkedPayloads[0], true);
+        $this->assertIsArray($parkedPayload);
+        $this->assertSame('job-paused', $parkedPayload['id'] ?? null);
+        $this->assertSame('batch-paused', $parkedPayload['batchId'] ?? null);
 
         $job->delete();
 
@@ -96,8 +98,8 @@ class PausableRedisQueueTest extends TestCase
     public function test_it_returns_null_when_only_paused_jobs_exist(): void
     {
         /** @var BatchPauseStore $store */
-        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
-        $queue = $this->app['queue']->connection('redis-pausable');
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis');
+        $queue = $this->app['queue']->connection('redis');
 
         $store->pause('batch-paused');
 
@@ -107,7 +109,12 @@ class PausableRedisQueueTest extends TestCase
         $job = $queue->pop('default');
 
         $this->assertNull($job);
-        $this->assertSame([$pausedPayload], $this->app['redis']->connection('default')->lrange($this->pausedListKey('batch-paused', 'queues:default'), 0, -1));
+        $parkedPayloads = $this->app['redis']->connection('default')->lrange($this->pausedListKey('batch-paused', 'queues:default'), 0, -1);
+        $this->assertCount(1, $parkedPayloads);
+        $parkedPayload = json_decode($parkedPayloads[0], true);
+        $this->assertIsArray($parkedPayload);
+        $this->assertSame('job-paused', $parkedPayload['id'] ?? null);
+        $this->assertSame('batch-paused', $parkedPayload['batchId'] ?? null);
     }
 
     public function test_extract_batch_id_from_direct_payload_keys(): void
@@ -177,13 +184,13 @@ class PausableRedisQueueTest extends TestCase
     {
         return new TestablePausableRedisQueue(
             $this->app['redis'],
+            m::mock(BatchPauseStore::class),
             'default',
             'default',
             60,
             null,
             false,
             -1,
-            m::mock(BatchPauseStore::class),
         );
     }
 }

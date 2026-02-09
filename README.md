@@ -2,7 +2,7 @@
 
 Pause and resume Laravel job batches running on Redis queues.
 
-When a batch is paused, workers using the `pausable-redis` queue driver will not execute jobs that belong to that batch. Paused jobs are parked in Redis and restored when the batch resumes.
+When a batch is paused, workers using the `redis` queue driver will not execute jobs that belong to that batch. Paused jobs are parked in Redis and restored when the batch resumes.
 
 ## Installation
 
@@ -12,13 +12,13 @@ composer require digiloopinc/laravel-pausable-batch
 
 ## Queue Connection Setup
 
-Add a queue connection using the custom driver:
+Use your standard `redis` queue connection:
 
 ```php
 // config/queue.php
 'connections' => [
-    'redis-pausable' => [
-        'driver' => 'pausable-redis',
+    'redis' => [
+        'driver' => 'redis',
         'connection' => 'default',
         'queue' => env('REDIS_QUEUE', 'default'),
         'retry_after' => 90,
@@ -37,10 +37,10 @@ Add a queue connection using the custom driver:
 Then run workers against that connection:
 
 ```bash
-php artisan queue:work redis-pausable
+php artisan queue:work redis
 ```
 
-Horizon can also use this connection by referencing it in Horizon queue configuration.
+Horizon uses the same `redis` connection and is automatically supported.
 
 ## Batch API
 

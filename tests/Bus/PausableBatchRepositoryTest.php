@@ -35,7 +35,7 @@ class PausableBatchRepositoryTest extends TestCase
         $batch = $this->makeBatch();
 
         $repository->shouldReceive('store')->once()->with($pending)->andReturn($batch);
-        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis')->andReturn($pauseStore);
 
         $pausable = new PausableBatchRepository($repository, $pauseStores);
 
@@ -53,7 +53,7 @@ class PausableBatchRepositoryTest extends TestCase
 
         $repository->shouldReceive('find')->once()->with('batch-1')->andReturn($this->makeBatch('batch-1'));
         $repository->shouldReceive('find')->once()->with('missing')->andReturnNull();
-        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis')->andReturn($pauseStore);
 
         $pausable = new PausableBatchRepository($repository, $pauseStores);
 
@@ -71,7 +71,7 @@ class PausableBatchRepositoryTest extends TestCase
             $this->makeBatch('batch-1'),
             $this->makeBatch('batch-2'),
         ]);
-        $pauseStores->shouldReceive('forQueueConnection')->twice()->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStores->shouldReceive('forQueueConnection')->twice()->with('redis')->andReturn($pauseStore);
 
         $pausable = new PausableBatchRepository($repository, $pauseStores);
 
@@ -92,7 +92,7 @@ class PausableBatchRepositoryTest extends TestCase
         $repository->shouldReceive('markAsFinished')->once()->with('batch-1');
         $repository->shouldReceive('cancel')->once()->with('batch-1');
         $repository->shouldReceive('delete')->once()->with('batch-1');
-        $pauseStores->shouldReceive('forQueueConnection')->times(3)->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStores->shouldReceive('forQueueConnection')->times(3)->with('redis')->andReturn($pauseStore);
         $pauseStore->shouldReceive('cleanup')->times(3)->with('batch-1');
 
         $pausable = new PausableBatchRepository($repository, $pauseStores);
@@ -112,8 +112,8 @@ class PausableBatchRepositoryTest extends TestCase
 
         $repository->shouldReceive('find')->once()->with('batch-1')->andReturnNull();
         $repository->shouldReceive('delete')->once()->with('batch-1');
-        $pauseStores->shouldReceive('defaultQueueConnection')->once()->andReturn('redis-pausable');
-        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStores->shouldReceive('defaultQueueConnection')->once()->andReturn('redis');
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis')->andReturn($pauseStore);
         $pauseStore->shouldReceive('cleanup')->once()->with('batch-1');
 
         $pausable = new PausableBatchRepository($repository, $pauseStores);
@@ -185,7 +185,7 @@ class PausableBatchRepositoryTest extends TestCase
             9,
             1,
             ['failed-1'],
-            ['queue' => 'default', 'connection' => 'redis-pausable'],
+            ['queue' => 'default', 'connection' => 'redis'],
             CarbonImmutable::parse('2025-01-01 00:00:00'),
             null,
             null,
