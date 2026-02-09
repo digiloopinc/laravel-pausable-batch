@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Digiloop\LaravelPausableBatch\Connectors;
 
 use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
-use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Queue\Connectors\RedisConnector;
 use Illuminate\Queue\Queue;
 
 class PausableRedisConnector extends RedisConnector
 {
-    public function __construct($redis, protected BatchPauseStore $pauseStore)
+    public function __construct($redis, protected BatchPauseStoreManager $pauseStores)
     {
         parent::__construct($redis);
     }
@@ -29,7 +29,7 @@ class PausableRedisConnector extends RedisConnector
             $config['block_for'] ?? null,
             $config['after_commit'] ?? null,
             $config['migration_batch_size'] ?? -1,
-            $this->pauseStore,
+            $this->pauseStores->forQueueConfig($config),
         );
     }
 }

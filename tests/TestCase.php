@@ -35,11 +35,13 @@ abstract class TestCase extends Orchestra
             'retry_after' => 90,
             'block_for' => null,
             'after_commit' => false,
+            'options' => [
+                'pausable' => [
+                    'redis_prefix' => 'test-laravel-pausable-batch',
+                    'restore_chunk_size' => 2,
+                ],
+            ],
         ]);
-
-        $app['config']->set('laravel-pausable-batch.redis_connection', 'default');
-        $app['config']->set('laravel-pausable-batch.redis_prefix', 'test-laravel-pausable-batch');
-        $app['config']->set('laravel-pausable-batch.restore_chunk_size', 2);
     }
 
     protected function tearDown(): void

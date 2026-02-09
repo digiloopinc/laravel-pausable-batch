@@ -6,6 +6,7 @@ namespace Digiloop\LaravelPausableBatch\Bus;
 
 use Closure;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\PendingBatch;
@@ -15,7 +16,7 @@ class PausableBatchRepository implements BatchRepository
 {
     public function __construct(
         protected BatchRepository $repository,
-        protected BatchPauseStore $pauseStore,
+        protected BatchPauseStoreManager $pauseStores,
     ) {}
 
     public function store(PendingBatch $batch): Batch
@@ -54,20 +55,26 @@ class PausableBatchRepository implements BatchRepository
 
     public function markAsFinished(string $batchId): void
     {
+        $pauseStore = $this->pauseStoreForBatchId($batchId);
+
         $this->repository->markAsFinished($batchId);
-        $this->pauseStore->cleanup($batchId);
+        $pauseStore->cleanup($batchId);
     }
 
     public function cancel(string $batchId): void
     {
+        $pauseStore = $this->pauseStoreForBatchId($batchId);
+
         $this->repository->cancel($batchId);
-        $this->pauseStore->cleanup($batchId);
+        $pauseStore->cleanup($batchId);
     }
 
     public function delete(string $batchId): void
     {
+        $pauseStore = $this->pauseStoreForBatchId($batchId);
+
         $this->repository->delete($batchId);
-        $this->pauseStore->cleanup($batchId);
+        $pauseStore->cleanup($batchId);
     }
 
     public function transaction(Closure $callback): mixed
@@ -91,6 +98,25 @@ class PausableBatchRepository implements BatchRepository
             return $batch;
         }
 
-        return PausableBatch::fromBatch($batch, $this->pauseStore);
+        return PausableBatch::fromBatch($batch, $this->pauseStoreForBatch($batch));
+    }
+
+    protected function pauseStoreForBatchId(string $batchId): BatchPauseStore
+    {
+        $batch = $this->repository->find($batchId);
+
+        return $batch ? $this->pauseStoreForBatch($batch) : $this->pauseStores->forQueueConnection(
+            $this->pauseStores->defaultQueueConnection(),
+        );
+    }
+
+    protected function pauseStoreForBatch(Batch $batch): BatchPauseStore
+    {
+        $connection = $batch->options['connection'] ?? null;
+        $connection = is_string($connection) && $connection !== ''
+            ? $connection
+            : $this->pauseStores->defaultQueueConnection();
+
+        return $this->pauseStores->forQueueConnection($connection);
     }
 }

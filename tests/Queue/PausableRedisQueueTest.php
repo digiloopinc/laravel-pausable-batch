@@ -6,6 +6,7 @@ namespace Digiloop\LaravelPausableBatch\Tests\Queue;
 
 use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Digiloop\LaravelPausableBatch\Tests\Concerns\InteractsWithRedis;
 use Digiloop\LaravelPausableBatch\Tests\TestCase;
 use Illuminate\Queue\Jobs\RedisJob;
@@ -63,7 +64,7 @@ class PausableRedisQueueTest extends TestCase
     public function test_it_parks_jobs_for_paused_batches_and_moves_on_to_next_job(): void
     {
         /** @var BatchPauseStore $store */
-        $store = $this->app->make(BatchPauseStore::class);
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
         $queue = $this->app['queue']->connection('redis-pausable');
 
         $store->pause('batch-paused');
@@ -95,7 +96,7 @@ class PausableRedisQueueTest extends TestCase
     public function test_it_returns_null_when_only_paused_jobs_exist(): void
     {
         /** @var BatchPauseStore $store */
-        $store = $this->app->make(BatchPauseStore::class);
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
         $queue = $this->app['queue']->connection('redis-pausable');
 
         $store->pause('batch-paused');

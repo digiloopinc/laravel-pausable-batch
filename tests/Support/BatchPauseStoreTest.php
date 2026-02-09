@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Digiloop\LaravelPausableBatch\Tests\Support;
 
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Digiloop\LaravelPausableBatch\Tests\Concerns\InteractsWithRedis;
 use Digiloop\LaravelPausableBatch\Tests\TestCase;
 use Illuminate\Redis\Connections\Connection;
@@ -34,7 +35,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_it_can_pause_and_report_paused_state(): void
     {
-        $store = $this->app->make(BatchPauseStore::class);
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
 
         $this->assertFalse($store->paused('batch-1'));
 
@@ -45,7 +46,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_it_parks_jobs_and_resumes_them_in_order(): void
     {
-        $store = $this->app->make(BatchPauseStore::class);
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
         $batchId = 'batch-1';
         $queueKey = 'queues:default';
 
@@ -87,7 +88,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_cleanup_deletes_all_paused_data_for_the_batch(): void
     {
-        $store = $this->app->make(BatchPauseStore::class);
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
         $batchId = 'batch-3';
 
         $store->pause($batchId);

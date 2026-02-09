@@ -6,25 +6,20 @@ namespace Digiloop\LaravelPausableBatch\Tests\Integration;
 
 use Digiloop\LaravelPausableBatch\Bus\PausableBatchRepository;
 use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
-use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Digiloop\LaravelPausableBatch\Tests\TestCase;
 use Illuminate\Bus\BatchRepository;
 use Mockery as m;
 
 class LaravelPausableBatchServiceProviderTest extends TestCase
 {
-    public function test_it_merges_default_configuration_values(): void
+    public function test_it_resolves_batch_pause_store_manager_from_container(): void
     {
-        $this->assertSame('default', config('laravel-pausable-batch.redis_connection'));
-        $this->assertSame('test-laravel-pausable-batch', config('laravel-pausable-batch.redis_prefix'));
-        $this->assertSame(2, config('laravel-pausable-batch.restore_chunk_size'));
-    }
+        $manager = $this->app->make(BatchPauseStoreManager::class);
 
-    public function test_it_resolves_batch_pause_store_from_container(): void
-    {
-        $store = $this->app->make(BatchPauseStore::class);
+        $this->assertInstanceOf(BatchPauseStoreManager::class, $manager);
 
-        $this->assertInstanceOf(BatchPauseStore::class, $store);
+        $store = $manager->forQueueConnection('redis-pausable');
 
         $connection = (fn () => $this->connection)->call($store);
         $prefix = (fn () => $this->prefix)->call($store);

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Digiloop\LaravelPausableBatch\Bus\PausableBatch;
 use Digiloop\LaravelPausableBatch\Bus\PausableBatchRepository;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\PendingBatch;
@@ -28,13 +29,15 @@ class PausableBatchRepositoryTest extends TestCase
     public function test_store_wraps_the_returned_batch(): void
     {
         $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
         $pending = m::mock(PendingBatch::class);
         $batch = $this->makeBatch();
 
         $repository->shouldReceive('store')->once()->with($pending)->andReturn($batch);
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $stored = $pausable->store($pending);
 
@@ -45,12 +48,14 @@ class PausableBatchRepositoryTest extends TestCase
     public function test_find_wraps_batches_and_returns_null_when_missing(): void
     {
         $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
 
         $repository->shouldReceive('find')->once()->with('batch-1')->andReturn($this->makeBatch('batch-1'));
         $repository->shouldReceive('find')->once()->with('missing')->andReturnNull();
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $this->assertInstanceOf(PausableBatch::class, $pausable->find('batch-1'));
         $this->assertNull($pausable->find('missing'));
@@ -59,14 +64,16 @@ class PausableBatchRepositoryTest extends TestCase
     public function test_get_wraps_all_batches(): void
     {
         $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
 
         $repository->shouldReceive('get')->once()->with(2, null)->andReturn([
             $this->makeBatch('batch-1'),
             $this->makeBatch('batch-2'),
         ]);
+        $pauseStores->shouldReceive('forQueueConnection')->twice()->with('redis-pausable')->andReturn($pauseStore);
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $batches = $pausable->get(2, null);
 
@@ -75,17 +82,20 @@ class PausableBatchRepositoryTest extends TestCase
         $this->assertInstanceOf(PausableBatch::class, $batches[1]);
     }
 
-    public function test_cleanup_is_called_for_lifecycle_methods(): void
+    public function test_cleanup_is_called_for_lifecycle_methods_using_batch_connection_store(): void
     {
         $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
 
+        $repository->shouldReceive('find')->times(3)->with('batch-1')->andReturn($this->makeBatch('batch-1'));
         $repository->shouldReceive('markAsFinished')->once()->with('batch-1');
         $repository->shouldReceive('cancel')->once()->with('batch-1');
         $repository->shouldReceive('delete')->once()->with('batch-1');
+        $pauseStores->shouldReceive('forQueueConnection')->times(3)->with('redis-pausable')->andReturn($pauseStore);
         $pauseStore->shouldReceive('cleanup')->times(3)->with('batch-1');
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $pausable->markAsFinished('batch-1');
         $pausable->cancel('batch-1');
@@ -94,10 +104,29 @@ class PausableBatchRepositoryTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function test_cleanup_falls_back_to_default_queue_connection_when_batch_not_found(): void
+    {
+        $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
+        $pauseStore = m::mock(BatchPauseStore::class);
+
+        $repository->shouldReceive('find')->once()->with('batch-1')->andReturnNull();
+        $repository->shouldReceive('delete')->once()->with('batch-1');
+        $pauseStores->shouldReceive('defaultQueueConnection')->once()->andReturn('redis-pausable');
+        $pauseStores->shouldReceive('forQueueConnection')->once()->with('redis-pausable')->andReturn($pauseStore);
+        $pauseStore->shouldReceive('cleanup')->once()->with('batch-1');
+
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
+
+        $pausable->delete('batch-1');
+
+        $this->addToAssertionCount(1);
+    }
+
     public function test_it_passes_through_repository_methods(): void
     {
         $repository = m::mock(BatchRepository::class);
-        $pauseStore = m::mock(BatchPauseStore::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $counts = new UpdatedBatchJobCounts(4, 1);
 
         $repository->shouldReceive('incrementTotalJobs')->once()->with('batch-1', 2);
@@ -107,7 +136,7 @@ class PausableBatchRepositoryTest extends TestCase
         $repository->shouldReceive('rollBack')->once();
         $repository->shouldReceive('customMethod')->once()->with('arg')->andReturn('ok');
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $pausable->incrementTotalJobs('batch-1', 2);
         $this->assertSame($counts, $pausable->decrementPendingJobs('batch-1', 'job-1'));
@@ -120,6 +149,7 @@ class PausableBatchRepositoryTest extends TestCase
     public function test_wrap_is_idempotent_for_existing_pausable_batch_instances(): void
     {
         $repository = m::mock(BatchRepository::class);
+        $pauseStores = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
         $existing = new PausableBatch(
             m::mock(QueueFactory::class),
@@ -139,7 +169,7 @@ class PausableBatchRepositoryTest extends TestCase
 
         $repository->shouldReceive('find')->once()->with('batch-1')->andReturn($existing);
 
-        $pausable = new PausableBatchRepository($repository, $pauseStore);
+        $pausable = new PausableBatchRepository($repository, $pauseStores);
 
         $this->assertSame($existing, $pausable->find('batch-1'));
     }
@@ -155,7 +185,7 @@ class PausableBatchRepositoryTest extends TestCase
             9,
             1,
             ['failed-1'],
-            ['queue' => 'default'],
+            ['queue' => 'default', 'connection' => 'redis-pausable'],
             CarbonImmutable::parse('2025-01-01 00:00:00'),
             null,
             null,

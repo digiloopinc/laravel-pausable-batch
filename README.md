@@ -24,6 +24,12 @@ Add a queue connection using the custom driver:
         'retry_after' => 90,
         'block_for' => null,
         'after_commit' => false,
+        'options' => [
+            'pausable' => [
+                'redis_prefix' => env('PAUSABLE_BATCH_REDIS_PREFIX', 'laravel-pausable-batch'),
+                'restore_chunk_size' => (int) env('PAUSABLE_BATCH_RESTORE_CHUNK_SIZE', 1000),
+            ],
+        ],
     ],
 ],
 ```
@@ -61,17 +67,12 @@ if ($batch->paused()) {
 
 ## Configuration
 
-Publish config:
+Configure pausable behavior directly on each queue connection under `options.pausable`:
 
-```bash
-php artisan vendor:publish --tag=laravel-pausable-batch-config
-```
-
-Config file: `config/laravel-pausable-batch.php`
-
-- `redis_connection`: Redis connection used for pause metadata.
 - `redis_prefix`: Redis key prefix for pause metadata.
 - `restore_chunk_size`: Number of paused jobs restored per chunk on resume.
+
+Pause metadata uses the same Redis connection as the queue connection's `connection` setting.
 
 ## Behavior Notes
 

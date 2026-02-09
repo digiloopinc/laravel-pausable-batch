@@ -7,6 +7,7 @@ namespace Digiloop\LaravelPausableBatch\Tests\Connectors;
 use Digiloop\LaravelPausableBatch\Connectors\PausableRedisConnector;
 use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
+use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Mockery as m;
 use PHPUnit\Framework\TestCase;
@@ -23,9 +24,11 @@ class PausableRedisConnectorTest extends TestCase
     public function test_it_creates_a_pausable_redis_queue_using_config_values(): void
     {
         $redis = m::mock(RedisFactory::class);
+        $pauseStoreManager = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
+        $pauseStoreManager->shouldReceive('forQueueConfig')->once()->andReturn($pauseStore);
 
-        $connector = new PausableRedisConnector($redis, $pauseStore);
+        $connector = new PausableRedisConnector($redis, $pauseStoreManager);
 
         $queue = $connector->connect([
             'queue' => 'emails',
@@ -46,9 +49,11 @@ class PausableRedisConnectorTest extends TestCase
     public function test_it_uses_defaults_when_optional_config_is_missing(): void
     {
         $redis = m::mock(RedisFactory::class);
+        $pauseStoreManager = m::mock(BatchPauseStoreManager::class);
         $pauseStore = m::mock(BatchPauseStore::class);
+        $pauseStoreManager->shouldReceive('forQueueConfig')->once()->andReturn($pauseStore);
 
-        $connector = new PausableRedisConnector($redis, $pauseStore);
+        $connector = new PausableRedisConnector($redis, $pauseStoreManager);
 
         $queue = $connector->connect([]);
 
