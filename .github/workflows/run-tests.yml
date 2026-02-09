@@ -73,7 +73,7 @@ jobs:
             --with "phpunit/phpunit:${{ matrix.phpunit }}"
 
       - name: List Installed Dependencies
-        run: composer show -D
+        run: composer show
 
       - name: Execute tests with Redis
         env:
