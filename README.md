@@ -2,6 +2,9 @@
 
 Pause and resume Laravel job batches running on Redis queues.
 
+> [!WARNING]
+> This package is currently under active development and is not yet considered production-stable.
+
 When a batch is paused, workers using the `redis` queue driver will not execute jobs that belong to that batch. Paused jobs are parked in Redis and restored when the batch resumes.
 
 ## Installation
