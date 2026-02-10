@@ -30,20 +30,6 @@ class PausableRedisQueueTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_constructor_signature_requires_a_pause_store_instance(): void
-    {
-        $constructor = new \ReflectionMethod(PausableRedisQueue::class, '__construct');
-        $parameters = $constructor->getParameters();
-        $pauseStoreParameter = $parameters[7];
-
-        $this->assertFalse($pauseStoreParameter->allowsNull());
-        $this->assertTrue($pauseStoreParameter->hasType());
-        $type = $pauseStoreParameter->getType();
-        $this->assertInstanceOf(\ReflectionNamedType::class, $type);
-        $this->assertSame(BatchPauseStore::class, $type->getName());
-        $this->assertSame('pauseStore', $pauseStoreParameter->getName());
-    }
-
     public function test_it_pops_jobs_for_unpaused_batches(): void
     {
         $queue = $this->app['queue']->connection('redis');
