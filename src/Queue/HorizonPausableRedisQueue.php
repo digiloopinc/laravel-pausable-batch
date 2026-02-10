@@ -6,9 +6,9 @@ namespace Digiloop\LaravelPausableBatch\Queue;
 
 use Digiloop\LaravelPausableBatch\Queue\Concerns\PausesBatchJobs;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStore;
-use Illuminate\Queue\RedisQueue;
+use Laravel\Horizon\RedisQueue as HorizonRedisQueue;
 
-class PausableRedisQueue extends RedisQueue
+class HorizonPausableRedisQueue extends HorizonRedisQueue
 {
     use PausesBatchJobs;
 

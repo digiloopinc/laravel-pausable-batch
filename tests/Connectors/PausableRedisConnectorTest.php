@@ -31,6 +31,7 @@ class PausableRedisConnectorTest extends TestCase
         $connector = new PausableRedisConnector($redis, $pauseStoreManager);
 
         $queue = $connector->connect([
+            'driver' => 'redis',
             'queue' => 'emails',
             'connection' => 'default',
             'retry_after' => 120,
@@ -55,7 +56,10 @@ class PausableRedisConnectorTest extends TestCase
 
         $connector = new PausableRedisConnector($redis, $pauseStoreManager);
 
-        $queue = $connector->connect([]);
+        $queue = $connector->connect([
+            'driver' => 'redis',
+            'queue' => 'default',
+        ]);
 
         $this->assertInstanceOf(PausableRedisQueue::class, $queue);
         $this->assertSame('queues:default', $queue->getQueue(null));

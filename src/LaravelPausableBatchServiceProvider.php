@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Digiloop\LaravelPausableBatch;
 
 use Digiloop\LaravelPausableBatch\Bus\PausableBatchRepository;
+use Digiloop\LaravelPausableBatch\Connectors\HorizonPausableRedisConnector;
 use Digiloop\LaravelPausableBatch\Connectors\PausableRedisConnector;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Bus\BatchRepository;
@@ -32,13 +33,29 @@ class LaravelPausableBatchServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->app->afterResolving('queue', function (QueueManager $manager): void {
-            $manager->addConnector('pausable-redis', function () {
+        $registerRedisConnector = function (QueueManager $manager): void {
+            $manager->addConnector('redis', function () {
+                $horizonConnectorAvailable = class_exists(\Laravel\Horizon\Connectors\RedisConnector::class)
+                    && class_exists(\Laravel\Horizon\RedisQueue::class);
+
+                if ($horizonConnectorAvailable) {
+                    return new HorizonPausableRedisConnector(
+                        $this->app->make('redis'),
+                        $this->app->make(BatchPauseStoreManager::class),
+                    );
+                }
+
                 return new PausableRedisConnector(
                     $this->app->make('redis'),
                     $this->app->make(BatchPauseStoreManager::class),
                 );
             });
-        });
+        };
+
+        if ($this->app->resolved('queue')) {
+            $registerRedisConnector($this->app->make('queue'));
+        }
+
+        $this->app->afterResolving('queue', $registerRedisConnector);
     }
 }

@@ -26,7 +26,7 @@ class BatchPauseStoreManagerTest extends TestCase
 
         $config->shouldReceive('get')
             ->once()
-            ->with('queue.connections.redis-pausable', [])
+            ->with('queue.connections.redis', [])
             ->andReturn([
                 'connection' => 'custom-redis',
                 'options' => [
@@ -38,7 +38,7 @@ class BatchPauseStoreManagerTest extends TestCase
             ]);
 
         $manager = new BatchPauseStoreManager($redis, $config);
-        $store = $manager->forQueueConnection('redis-pausable');
+        $store = $manager->forQueueConnection('redis');
 
         $connection = (fn () => $this->connection)->call($store);
         $prefix = (fn () => $this->prefix)->call($store);
@@ -56,7 +56,7 @@ class BatchPauseStoreManagerTest extends TestCase
 
         $config->shouldReceive('get')
             ->once()
-            ->with('queue.connections.redis-pausable', [])
+            ->with('queue.connections.redis', [])
             ->andReturn([
                 'options' => [
                     'pausable' => [
@@ -67,7 +67,7 @@ class BatchPauseStoreManagerTest extends TestCase
             ]);
 
         $manager = new BatchPauseStoreManager($redis, $config);
-        $store = $manager->forQueueConnection('redis-pausable');
+        $store = $manager->forQueueConnection('redis');
 
         $connection = (fn () => $this->connection)->call($store);
         $prefix = (fn () => $this->prefix)->call($store);
@@ -85,7 +85,7 @@ class BatchPauseStoreManagerTest extends TestCase
 
         $config->shouldReceive('get')
             ->twice()
-            ->with('queue.connections.redis-pausable', [])
+            ->with('queue.connections.redis', [])
             ->andReturn([
                 'connection' => 'default',
                 'options' => [
@@ -98,8 +98,8 @@ class BatchPauseStoreManagerTest extends TestCase
 
         $manager = new BatchPauseStoreManager($redis, $config);
 
-        $first = $manager->forQueueConnection('redis-pausable');
-        $second = $manager->forQueueConnection('redis-pausable');
+        $first = $manager->forQueueConnection('redis');
+        $second = $manager->forQueueConnection('redis');
 
         $this->assertSame($first, $second);
     }
@@ -112,10 +112,10 @@ class BatchPauseStoreManagerTest extends TestCase
         $config->shouldReceive('get')
             ->once()
             ->with('queue.default', 'default')
-            ->andReturn('redis-pausable');
+            ->andReturn('redis');
 
         $manager = new BatchPauseStoreManager($redis, $config);
 
-        $this->assertSame('redis-pausable', $manager->defaultQueueConnection());
+        $this->assertSame('redis', $manager->defaultQueueConnection());
     }
 }

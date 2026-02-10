@@ -27,9 +27,9 @@ abstract class TestCase extends Orchestra
             'timeout' => 0.5,
         ]);
 
-        $app['config']->set('queue.default', 'redis-pausable');
-        $app['config']->set('queue.connections.redis-pausable', [
-            'driver' => 'pausable-redis',
+        $app['config']->set('queue.default', 'redis');
+        $app['config']->set('queue.connections.redis', [
+            'driver' => 'redis',
             'connection' => 'default',
             'queue' => 'default',
             'retry_after' => 90,

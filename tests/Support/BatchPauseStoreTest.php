@@ -35,7 +35,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_it_can_pause_and_report_paused_state(): void
     {
-        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis');
 
         $this->assertFalse($store->paused('batch-1'));
 
@@ -46,7 +46,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_it_parks_jobs_and_resumes_them_in_order(): void
     {
-        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis');
         $batchId = 'batch-1';
         $queueKey = 'queues:default';
 
@@ -88,7 +88,7 @@ class BatchPauseStoreTest extends TestCase
 
     public function test_cleanup_deletes_all_paused_data_for_the_batch(): void
     {
-        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis-pausable');
+        $store = $this->app->make(BatchPauseStoreManager::class)->forQueueConnection('redis');
         $batchId = 'batch-3';
 
         $store->pause($batchId);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Digiloop\LaravelPausableBatch\Tests\Integration;
 
 use Digiloop\LaravelPausableBatch\Bus\PausableBatchRepository;
+use Digiloop\LaravelPausableBatch\Queue\HorizonPausableRedisQueue;
 use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Digiloop\LaravelPausableBatch\Tests\TestCase;
@@ -19,7 +20,7 @@ class LaravelPausableBatchServiceProviderTest extends TestCase
 
         $this->assertInstanceOf(BatchPauseStoreManager::class, $manager);
 
-        $store = $manager->forQueueConnection('redis-pausable');
+        $store = $manager->forQueueConnection('redis');
 
         $connection = (fn () => $this->connection)->call($store);
         $prefix = (fn () => $this->prefix)->call($store);
@@ -45,9 +46,30 @@ class LaravelPausableBatchServiceProviderTest extends TestCase
         $this->assertSame($underlying, $innerRepository);
     }
 
-    public function test_it_registers_the_pausable_redis_queue_connector(): void
+    public function test_it_registers_the_redis_queue_connector_with_pausable_queue(): void
     {
-        $queue = $this->app['queue']->connection('redis-pausable');
+        $queue = $this->app['queue']->connection('redis');
+
+        $this->assertResolvedPausableQueueType($queue);
+    }
+
+    public function test_it_registers_pausable_behavior_for_named_redis_connections(): void
+    {
+        $queue = $this->app['queue']->connection('redis');
+
+        $this->assertResolvedPausableQueueType($queue);
+    }
+
+    protected function assertResolvedPausableQueueType(object $queue): void
+    {
+        $horizonClassesAvailable = class_exists(\Laravel\Horizon\Connectors\RedisConnector::class)
+            && class_exists(\Laravel\Horizon\RedisQueue::class);
+
+        if ($horizonClassesAvailable) {
+            $this->assertInstanceOf(HorizonPausableRedisQueue::class, $queue);
+
+            return;
+        }
 
         $this->assertInstanceOf(PausableRedisQueue::class, $queue);
     }

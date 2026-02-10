@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace Digiloop\LaravelPausableBatch\Connectors;
 
-use Digiloop\LaravelPausableBatch\Queue\PausableRedisQueue;
+use Digiloop\LaravelPausableBatch\Queue\HorizonPausableRedisQueue;
 use Digiloop\LaravelPausableBatch\Support\BatchPauseStoreManager;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
-use Illuminate\Queue\Connectors\RedisConnector;
 use Illuminate\Queue\Queue;
+use Laravel\Horizon\Connectors\RedisConnector as HorizonRedisConnector;
 
-class PausableRedisConnector extends RedisConnector
+class HorizonPausableRedisConnector extends HorizonRedisConnector
 {
     public function __construct(
         RedisFactory $redis,
         protected BatchPauseStoreManager $pauseStores,
-        ?string $connection = null,
     ) {
-        parent::__construct($redis, $connection);
+        parent::__construct($redis);
     }
 
     /**
@@ -25,7 +24,7 @@ class PausableRedisConnector extends RedisConnector
      */
     public function connect(array $config): Queue
     {
-        return new PausableRedisQueue(
+        return new HorizonPausableRedisQueue(
             $this->redis,
             $this->pauseStores->forQueueConfig($config),
             $config['queue'] ?? 'default',
